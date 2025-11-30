@@ -35,11 +35,11 @@
     "download",
     "typescript"
   ],
-  "author": "Your Name <your.email@example.com>",
+  "author": "kentpan <ayue222@126.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/syncer-fetch.git"
+    "url": "https://github.com/kentpan/syncer-fetch.git"
   },
   "devDependencies": {
     "typescript": "^5.2.2",
