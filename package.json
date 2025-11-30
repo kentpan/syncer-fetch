@@ -1,0 +1,40 @@
+{
+  "name": "syncer-fetch",
+  "version": "1.0.0",
+  "description": "一个适合上传下载二进制文件内容的fetch封装库，支持代理、并发控制、重试机制等功能",
+  "main": "dist/index.js",
+  "module": "src/index.js",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "cp src/index.js dist/index.js",
+    "dev": "http-server examples -p 8080 -o",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "fetch",
+    "http",
+    "request",
+    "proxy",
+    "concurrency",
+    "retry",
+    "promise"
+  ],
+  "author": "KentPan <ayue222@126.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kentpan/syncer-fetch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kentpan/syncer-fetch/issues"
+  },
+  "homepage": "https://github.com/kentpan/syncer-fetch#readme",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
