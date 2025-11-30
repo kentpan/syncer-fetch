@@ -1,18 +1,25 @@
 {
   "name": "syncer-fetch",
   "version": "1.0.0",
-  "description": "一个适合上传下载二进制文件内容的fetch封装库，支持代理、并发控制、重试机制等功能",
-  "main": "dist/index.js",
-  "module": "src/index.js",
+  "description": "一个适合并发上传下载二进制内容的fetch封装库，支持代理、并发控制、重试机制等功能。",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
-    "dist",
-    "src",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "scripts": {
-    "build": "cp src/index.js dist/index.js",
-    "dev": "http-server examples -p 8080 -o",
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -22,19 +29,21 @@
     "proxy",
     "concurrency",
     "retry",
-    "promise"
+    "promise",
+    "binary",
+    "upload",
+    "download",
+    "typescript"
   ],
-  "author": "KentPan <ayue222@126.com>",
+  "author": "Your Name <your.email@example.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kentpan/syncer-fetch.git"
+    "url": "https://github.com/yourusername/syncer-fetch.git"
   },
-  "bugs": {
-    "url": "https://github.com/kentpan/syncer-fetch/issues"
-  },
-  "homepage": "https://github.com/kentpan/syncer-fetch#readme",
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.6.0"
   }
 }

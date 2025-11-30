@@ -1,1 +1,231 @@
-!function(e,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):e.$syncer=t()}("undefined"!=typeof self?self:window,function(){"use strict";class e{constructor(){let e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:3;this.maxConcurrency=e,this.running=0,this.queue=[]}async add(e){return new Promise((t,r)=>{this.queue.push({task:e,resolve:t,reject:r}),this.process()})}async process(){if(this.running>=this.maxConcurrency||0===this.queue.length)return;this.running++;const{task:e,resolve:t,reject:r}=this.queue.shift();try{t(await e())}catch(e){r(e)}finally{this.running--,this.process()}}}const t=new class{constructor(){this.defaultOptions={timeout:15e3,retries:3,retryDelay:1e3}}createController(){return new AbortController}detectFileType(e,t){if(e){if(e.startsWith("image/"))return"image";if(e.startsWith("text/"))return"text"}return"blob"}toBase64(e){(""===e||e.type&&0===e.size)&&(e="\n");let t=!1;return e.type?(e.type.startsWith("image/")?(console.log(`检测到图片格式: ${e.type}`),t=!0):console.log(`其他文件格式: ${e.type||"未知"}`),new Promise((r,s)=>{const o=new FileReader;o.onloadend=()=>r(o.result.replace(/^data:.+;base64,/,"")),o.onerror=e=>s(t?"图片转换失败:"+e:e),o.readAsDataURL(e)})):Promise.resolve(this.txtToBase64(e))}base64ToString(e){const t=atob(e),r=t.length,s=new Uint8Array(r);for(let e=0;e<r;e++)s[e]=t.charCodeAt(e);return new TextDecoder("utf-8").decode(s)}async blobToString(e){let t=e instanceof Blob&&/json$/i.test(e.type);return new Promise((r,s)=>{const o=new FileReader;o.onloadend=()=>{let e=o.result.replace(/^data:.+;base64,/,"");if(console.log("result:",e),e=this.base64ToString(e),t){let t=e;try{t=JSON.parse(e)}catch{}r(t)}else r(e)},o.readAsDataURL(e)})}txtToBase64(){let e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:"";const t=new TextEncoder("utf-8").encode(e),r=Array.from(t,e=>String.fromCharCode(e)).join("");return btoa(r)}async handleResponse(e){const t=e.headers.get("content-type")||"",r=e.url,s=this.detectFileType(t,r);return{data:await e.blob(),fileType:s,contentType:t,size:e.headers.get("content-length")||0}}async request(e){let t=arguments.length>1&&void 0!==arguments[1]?arguments[1]:{};const r={...this.defaultOptions,...t},s=r.signal||this.createController();let o={url:e,code:null,msg:"",data:null,loaded:0,total:0,duration:0};const n=Date.now();let a=null;try{r.before&&await r.before(e,r),r.platform&&(o.platform=r.platform,delete r.platform),r.timeout>0&&(a=setTimeout(()=>{s.abort()},r.timeout)),console.log("fetch:",e,r);const t=await fetch(e,{method:"GET",...r,signal:s.signal});switch(o.code=t.status,t.status){case 200:case 201:case 204:o.msg="ok";break;case 429:o.msg="请求频率超限，请稍后重试";break;case 401:o.msg="未授权，请检查认证信息";break;case 403:o.msg="禁止访问";break;case 404:o.msg="资源未找到";break;case 500:o.msg="服务器内部错误";break;default:o.msg=`请求失败: ${t.statusText}`}const n=await this.handleResponse(t,r);o.data=n.data,o.fileType=n.fileType,o.contentType=n.contentType,o.size=n.size}catch(e){"AbortError"===e.name?(o.code=0,o.msg="请求已取消"):(o.code=e.code||-1,o.msg=e.message||"网络错误")}finally{a&&clearTimeout(a),o.duration=Date.now()-n,r.after&&await r.after(e,o)}return o}async requestWithProxy(e){let t=arguments.length>1&&void 0!==arguments[1]?arguments[1]:{};const{proxies:r,...s}=t;if(!r||!Array.isArray(r)||0===r.length)return await this.request(e,s);let o=null;for(const t of r)try{const r={timeout:5e3,...s};let n;if("string"==typeof t)n=`${t}${e}`;else if(t.perfix)n=`${t.url}${e}`;else{const r=new URL(e),s=r.pathname+r.search+r.hash;n=`${t.url}${s}`}const a=await this.request(n,r);if(a.code>=200&&a.code<300)return a;o=a}catch(e){o={code:-1,msg:e.message,url:t.url}}return o||{code:-1,msg:"所有代理请求失败",url:e}}async downloadConcurrent(t){let r=arguments.length>1&&void 0!==arguments[1]?arguments[1]:{};const s=r.maxConcurrency||3,o=new e(s),n=t.map(e=>()=>this.requestWithProxy(e,r)).map(e=>o.add(e));return await Promise.allSettled(n)}async uploadParallel(e,t){let r=arguments.length>2&&void 0!==arguments[2]?arguments[2]:{};const s=t.map(async t=>{try{if(e&&"object"==typeof e){const s={...e,...t.branch&&{branch:t.branch},...t.sha&&{sha:t.sha}};r.body=JSON.stringify(s),r.headers={"Content-Type":"application/json",...t.headers}}else r.body=e;r.method=r.method||t.method||"POST";const s=await this.request(t.url,r);return{platform:t.name,...s}}catch(e){return{platform:t.name,code:-1,msg:e.message}}});return await Promise.allSettled(s)}},r=async(e,r)=>await t.request(e,r);return r.request=(e,r)=>t.request(e,r),r.proxy=(e,r)=>t.requestWithProxy(e,r),r.downloadAll=(e,r)=>t.downloadConcurrent(e,r),r.uploads=(e,r,s)=>t.uploadParallel(e,r,s),r.Aborter=()=>t.createController(),r.fileType=(e,r)=>t.detectFileType(e,r),r.toBase64=e=>t.toBase64(e),r.blobToString=e=>t.blobToString(e),r});
+class f {
+  constructor(e = 3) {
+    this.running = 0, this.queue = [], this.maxConcurrency = e;
+  }
+  async add(e) {
+    return new Promise((a, r) => {
+      this.queue.push({ task: e, resolve: a, reject: r }), this.process();
+    });
+  }
+  async process() {
+    if (this.running >= this.maxConcurrency || this.queue.length === 0)
+      return;
+    this.running++;
+    const { task: e, resolve: a, reject: r } = this.queue.shift();
+    try {
+      const n = await e();
+      a(n);
+    } catch (n) {
+      r(n);
+    } finally {
+      this.running--, this.process();
+    }
+  }
+}
+class g {
+  constructor() {
+    this.defaultOptions = {
+      timeout: 15e3,
+      retries: 3,
+      retryDelay: 1e3
+    };
+  }
+  createController() {
+    return new AbortController();
+  }
+  detectFileType(e, a) {
+    if (e) {
+      if (e.startsWith("image/")) return "image";
+      if (e.startsWith("text/")) return "text";
+    }
+    return "blob";
+  }
+  async toBase64(e) {
+    if ((e === "" || typeof e != "string" && e.type && e.size === 0) && (e = `
+`), typeof e == "string")
+      return this.txtToBase64(e);
+    const a = e.type.startsWith("image/");
+    return new Promise((r, n) => {
+      const s = new FileReader();
+      s.onloadend = () => {
+        typeof s.result == "string" ? r(s.result.replace(/^data:.+;base64,/, "")) : n(new Error("FileReader result is not a string"));
+      }, s.onerror = (t) => n(a ? "图片转换失败:" + t : t), s.readAsDataURL(e);
+    });
+  }
+  base64ToString(e) {
+    const a = atob(e), r = a.length, n = new Uint8Array(r);
+    for (let s = 0; s < r; s++)
+      n[s] = a.charCodeAt(s);
+    return new TextDecoder("utf-8").decode(n);
+  }
+  async blobToString(e) {
+    const a = /json$/i.test(e.type);
+    return new Promise((r, n) => {
+      const s = new FileReader();
+      s.onloadend = () => {
+        let t = s.result;
+        if (typeof t == "string")
+          t = t.replace(/^data:.+;base64,/, "");
+        else
+          throw new Error("Expected a string result from FileReader");
+        if (t = this.base64ToString(t), a)
+          try {
+            r(JSON.parse(t));
+          } catch {
+            r(t);
+          }
+        else
+          r(t);
+      }, s.onerror = (t) => n(t), s.readAsDataURL(e);
+    });
+  }
+  txtToBase64(e = "") {
+    const r = new TextEncoder().encode(e), n = Array.from(r, (s) => String.fromCharCode(s)).join("");
+    return btoa(n);
+  }
+  async handleResponse(e) {
+    const a = e.headers.get("content-type") || "", r = this.detectFileType(a, e.url);
+    return {
+      data: await e.blob(),
+      fileType: r,
+      contentType: a,
+      size: e.headers.get("content-length")
+    };
+  }
+  async request(e, a = {}) {
+    const r = { ...this.defaultOptions, ...a }, n = this.createController(), s = r.signal, t = {
+      url: e,
+      code: null,
+      msg: "",
+      data: null,
+      loaded: 0,
+      total: 0,
+      duration: 0,
+      fileType: "blob",
+      contentType: "",
+      size: 0
+    }, c = Date.now();
+    let l = null;
+    try {
+      r.before && await r.before(e, r), r.platform && (t.platform = r.platform, delete r.platform), r.timeout > 0 && (l = setTimeout(() => n.abort(), r.timeout));
+      const i = {
+        method: r.method || "GET",
+        headers: r.headers,
+        signal: n.signal
+      };
+      s instanceof AbortSignal && ("any" in AbortSignal ? i.signal = AbortSignal.any([n.signal, s]) : s.addEventListener("abort", () => {
+        n.abort();
+      }));
+      const u = await fetch(e, i);
+      switch (t.code = u.status, u.status) {
+        case 200:
+        case 201:
+        case 204:
+          t.msg = "ok";
+          break;
+        case 429:
+          t.msg = "请求频率超限，请稍后重试";
+          break;
+        case 401:
+          t.msg = "未授权，请检查认证信息";
+          break;
+        case 403:
+          t.msg = "禁止访问";
+          break;
+        case 404:
+          t.msg = "资源未找到";
+          break;
+        case 500:
+          t.msg = "服务器内部错误";
+          break;
+        default:
+          t.msg = `请求失败: ${u.statusText}`;
+      }
+      const y = await this.handleResponse(u);
+      t.data = y.data, t.fileType = y.fileType, t.contentType = y.contentType, t.size = y.size || 0;
+    } catch (i) {
+      i.name === "AbortError" ? (t.code = 0, t.msg = "请求已取消") : (t.code = i.code || -1, t.msg = i.message || "网络错误");
+    } finally {
+      l && clearTimeout(l), t.duration = Date.now() - c, r.after && await r.after(e, t);
+    }
+    return t;
+  }
+  async requestWithProxy(e, a = {}) {
+    const { proxies: r, ...n } = a;
+    if (!r || !Array.isArray(r) || r.length === 0)
+      return await this.request(e, n);
+    let s = null;
+    for (const t of r)
+      try {
+        const c = { timeout: 5e3, ...n };
+        let l;
+        if (typeof t == "string")
+          l = `${t}${e}`;
+        else if (t.perfix)
+          l = `${t.url}${e}`;
+        else {
+          const u = new URL(e), y = u.pathname + u.search + u.hash;
+          l = `${t.url}${y}`;
+        }
+        const i = await this.request(l, c);
+        if (i.code && i.code >= 200 && i.code < 300)
+          return i;
+        s = i;
+      } catch (c) {
+        s = {
+          code: -1,
+          msg: c.message,
+          url: typeof t == "string" ? t : t.url,
+          data: null,
+          loaded: 0,
+          total: 0,
+          duration: 0,
+          fileType: "blob",
+          contentType: "",
+          size: 0
+        };
+      }
+    return s || { code: -1, msg: "所有代理请求失败", url: e, data: null, loaded: 0, total: 0, duration: 0, fileType: "blob", contentType: "", size: 0 };
+  }
+  async downloadConcurrent(e, a = {}) {
+    const r = a.maxConcurrency || 3, n = new f(r), t = e.map((c) => () => this.requestWithProxy(c, a)).map((c) => n.add(c));
+    return await Promise.allSettled(t);
+  }
+  async uploadParallel(e, a, r = {}) {
+    const n = a.map(async (s) => {
+      try {
+        const t = { ...r };
+        if (e instanceof globalThis.Blob)
+          t.body = e, t.headers = { ...s.headers, ...t.headers };
+        else {
+          const l = {
+            ...e,
+            ...s.branch && { branch: s.branch },
+            ...s.sha && { sha: s.sha }
+          };
+          t.body = JSON.stringify(l), t.headers = { "Content-Type": "application/json", ...s.headers, ...t.headers };
+        }
+        t.method = r.method || s.method || "POST";
+        const c = await this.request(s.url, t);
+        return { platform: s.name, ...c };
+      } catch (t) {
+        return { platform: s.name, code: -1, msg: t.message, data: null, loaded: 0, total: 0, duration: 0, fileType: "blob", contentType: "", size: 0 };
+      }
+    });
+    return await Promise.allSettled(n);
+  }
+}
+const d = new g(), h = (o, e) => d.request(o, e);
+h.request = (o, e) => d.request(o, e);
+h.proxy = (o, e) => d.requestWithProxy(o, e);
+h.downloadAll = (o, e) => d.downloadConcurrent(o, e);
+h.uploads = (o, e, a) => d.uploadParallel(o, e, a);
+h.Aborter = () => d.createController();
+h.fileType = (o, e) => d.detectFileType(o, e);
+h.toBase64 = (o) => d.toBase64(o);
+h.blobToString = (o) => d.blobToString(o);
+export {
+  g as FetchFactory,
+  h as default
+};
+//# sourceMappingURL=index.js.map

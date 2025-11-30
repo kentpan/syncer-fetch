@@ -11,7 +11,7 @@ npm install syncer-fetch
 或者使用CDN：
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/syncer-fetch/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/syncer-fetch/dist/index.global.js"></script>
 ```
 
 ## 使用方法
@@ -133,27 +133,6 @@ results.forEach(result => {
 });
 ```
 
-### 上传JSON数据
-
-```javascript
-const jsonData = {
-  content: 'Hello World',
-  filename: 'example.txt'
-};
-
-const platforms = [
-  { 
-    name: 'API1', 
-    url: 'https://api.example.com/upload', 
-    method: 'POST',
-    branch: 'main',  // Git相关参数
-    sha: 'abc123'    // Git相关参数
-  }
-];
-
-const results = await $syncer.uploads(jsonData, platforms);
-```
-
 ### 文件处理
 
 ```javascript
@@ -169,9 +148,6 @@ console.log('Text:', text);
 // 检测文件类型
 const fileType = $syncer.fileType('image/png', 'https://example.com/image.png');
 console.log('File type:', fileType); // 'image'
-
-const textType = $syncer.fileType('text/html', 'https://example.com/page.html');
-console.log('File type:', textType); // 'text'
 ```
 
 ### 取消请求
@@ -196,36 +172,6 @@ try {
     console.error('请求失败:', error);
   }
 }
-```
-
-### 请求钩子
-
-```javascript
-const result = await $syncer.request('https://api.example.com/data', {
-  before: async (url, options) => {
-    console.log('准备发送请求:', url);
-    // 可以在这里修改options
-    options.headers = {
-      ...options.headers,
-      'X-Request-ID': generateRequestId()
-    };
-  },
-  after: async (url, result) => {
-    console.log('请求完成:', {
-      url,
-      status: result.code,
-      duration: result.duration
-    });
-    
-    // 记录请求日志
-    logRequest({
-      url,
-      status: result.code,
-      duration: result.duration,
-      size: result.size
-    });
-  }
-});
 ```
 
 ## API 参考
@@ -394,45 +340,6 @@ const jsonBlob = new Blob(['{"name": "John"}'], { type: 'application/json' });
 const obj = await $syncer.blobToString(jsonBlob);
 console.log(obj); // { name: 'John' }
 ```
-
-## 错误处理
-
-库提供了完善的错误处理机制：
-
-```javascript
-try {
-  const result = await $syncer.request('https://api.example.com/data');
-  
-  // 检查HTTP状态码
-  if (result.code >= 200 && result.code < 300) {
-    console.log('请求成功:', result.data);
-  } else {
-    console.error('请求失败:', result.msg);
-  }
-} catch (error) {
-  // 处理网络错误、超时等异常
-  if (error.name === 'AbortError') {
-    console.log('请求被取消');
-  } else {
-    console.error('网络错误:', error.message);
-  }
-}
-```
-
-## 状态码说明
-
-库自动将常见的HTTP状态码转换为友好的错误消息：
-
-| 状态码 | 消息 | 说明 |
-|--------|------|------|
-| 200/201/204 | 'ok' | 请求成功 |
-| 401 | '未授权，请检查认证信息' | 需要身份验证 |
-| 403 | '禁止访问' | 没有访问权限 |
-| 404 | '资源未找到' | URL不存在 |
-| 429 | '请求频率超限，请稍后重试' | 触发频率限制 |
-| 500 | '服务器内部错误' | 服务器问题 |
-| 0 | '请求已取消' | 被AbortController取消 |
-| -1 | '网络错误' | 网络连接问题 |
 
 ## 许可证
 
