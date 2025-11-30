@@ -1,6 +1,6 @@
 {
   "name": "syncer-fetch",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "一个适合并发上传下载二进制内容的fetch封装库，支持代理、并发控制、重试机制等功能。",
   "type": "module",
   "main": "./dist/index.cjs",
